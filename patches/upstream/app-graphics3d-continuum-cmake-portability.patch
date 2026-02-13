@@ -1,8 +1,8 @@
 diff --git a/continuum/CMakeLists.txt b/continuum/CMakeLists.txt
-index 5ca7982..b8f5f8e 100644
+index 396e7f4..1b2a392 100644
 --- a/continuum/CMakeLists.txt
 +++ b/continuum/CMakeLists.txt
-@@ -7,10 +7,6 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+@@ -8,10 +8,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
  #add_subdirectory("vendor/glfw")
  
  find_package (Vulkan REQUIRED)
@@ -10,10 +10,11 @@ index 5ca7982..b8f5f8e 100644
 -
 -set(Vulkan_INCLUDE_DIR "C:/VulkanSDK/1.4.313.0/Include")
 -set(Vulkan_LIBRARY "C:/VulkanSDK/1.4.313.0/Lib/vulkan-1.lib")
++# NOTE: Keep Vulkan paths toolchain-driven; hard-coded SDK paths break portability.
  include_directories(${Vulkan_INCLUDE_DIR}) 
  
  list(APPEND library_source
-@@ -181,9 +177,25 @@ add_dependencies(${PROJECT_NAME} ${default_networking})
+@@ -185,15 +182,33 @@ add_dependencies(${PROJECT_NAME} ${default_networking})
  add_dependencies(${PROJECT_NAME} ${default_write_text})
  add_dependencies(${PROJECT_NAME} database_sqlite3)
  
@@ -21,8 +22,9 @@ index 5ca7982..b8f5f8e 100644
 -#file(MAKE_DIRECTORY ${SPIRV_OUTPUT_DIR})
 +set(SPIRV_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../_matter/continuum/_std/_std/shaders/spirV")
 +file(MAKE_DIRECTORY ${SPIRV_OUTPUT_DIR})
- 
++
 +set(GLSLANG_VALIDATOR "${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE}")
++# NOTE: Resolve glslangValidator from Vulkan package, then VULKAN_SDK, then PATH.
 +if (NOT GLSLANG_VALIDATOR)
 +    if (DEFINED ENV{VULKAN_SDK})
 +        if (WIN32)
@@ -38,14 +40,21 @@ index 5ca7982..b8f5f8e 100644
 +if (NOT GLSLANG_VALIDATOR)
 +    find_program(GLSLANG_VALIDATOR glslangValidator REQUIRED)
 +endif ()
-+ 
+ 
  foreach(SHADER_FILE ${SHADER_FILES})
      get_filename_component(FILE_NAME ${SHADER_FILE} NAME)
      add_custom_command(
-@@ -191,7 +203,7 @@ foreach(SHADER_FILE ${SHADER_FILES})
+             OUTPUT ${SPIRV_OUTPUT_DIR}/${FILE_NAME}.spv
              COMMAND ${CMAKE_COMMAND} -E echo "Compiling shader: ${FILE_NAME}"
 -            COMMAND glslangValidator -V ${SHADER_FILE} -o ${SPIRV_OUTPUT_DIR}/${FILE_NAME}.spv
 +            COMMAND ${GLSLANG_VALIDATOR} -V ${SHADER_FILE} -o ${SPIRV_OUTPUT_DIR}/${FILE_NAME}.spv
              DEPENDS ${SHADER_FILE}
              COMMENT "Compiling ${FILE_NAME} to SPIR-V"
      )
+@@ -219,4 +234,4 @@ target_include_directories(static_${PROJECT_NAME} PRIVATE ${library_include_dire
+ 
+ target_compile_definitions(${PROJECT_NAME} PRIVATE _${PROJECT_NAME}_project)
+ 
+-add_subdirectory(__implement)
+\ No newline at end of file
++add_subdirectory(__implement)

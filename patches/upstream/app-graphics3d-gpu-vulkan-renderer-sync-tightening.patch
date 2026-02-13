@@ -8,7 +8,7 @@ index 88ec2e9..4cf3dd7 100644
  
 -      // Make sure you wait for GPU rendering to finish
 -      vkDeviceWaitIdle(m_pcontext->logicalDevice()); // Or wait on a specific fence
-+      // Scope synchronization to the graphics queue used for readback work.
++      // NOTE: Scope synchronization to the graphics queue used for readback work.
 +      ::cast < ::gpu_vulkan::queue > pqueueGraphics = m_pcontext->m_pgpudevice->graphics_queue();
 +      vkQueueWaitIdle(pqueueGraphics->m_vkqueue);
  
@@ -34,7 +34,7 @@ index 88ec2e9..4cf3dd7 100644
 -      ::cast < ::gpu_vulkan::queue > pqueueGraphics = m_pgpucontext->m_pgpudevice->graphics_queue();
 -
 -      vkQueueWaitIdle(pqueueGraphics->m_vkqueue);
-+      // Avoid queue-wide stalls in the draw path; frame submission sync handles ordering.
++      // NOTE: Avoid queue-wide stalls in the draw path; frame submission sync handles ordering.
  
        //vkFreeCommandBuffers(m_pgpucontext->logicalDevice(), m_pgpucontext->m_vkcommandpool, 1, &pcommandbuffer->m_vkcommandbuffer);
  
@@ -46,7 +46,7 @@ index 88ec2e9..4cf3dd7 100644
 -      ::cast < ::gpu_vulkan::queue > pqueueGraphics = m_pgpucontext->m_pgpudevice->graphics_queue();
 -
 -      vkQueueWaitIdle(pqueueGraphics->m_vkqueue);
-+      // Avoid queue-wide stalls in the draw path; frame submission sync handles ordering.
++      // NOTE: Avoid queue-wide stalls in the draw path; frame submission sync handles ordering.
  
        //vkFreeCommandBuffers(m_pgpucontext->logicalDevice(), m_pgpucontext->m_vkcommandpool, 1, &pcommandbuffer->m_vkcommandbuffer);
  
@@ -58,7 +58,8 @@ index 88ec2e9..4cf3dd7 100644
 -      ::cast < ::gpu_vulkan::queue > pqueueGraphics = m_pgpucontext->m_pgpudevice->graphics_queue();
 -
 -      vkQueueWaitIdle(pqueueGraphics->m_vkqueue);
-+      // Avoid queue-wide stalls in the draw path; frame submission sync handles ordering.
++      // NOTE: Avoid queue-wide stalls in the draw path; frame submission sync handles ordering.
  
        //vkFreeCommandBuffers(m_pgpucontext->logicalDevice(), m_pgpucontext->m_vkcommandpool, 1, &pcommandbuffer->m_vkcommandbuffer);
  
+

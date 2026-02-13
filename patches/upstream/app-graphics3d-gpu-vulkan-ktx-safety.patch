@@ -1,22 +1,24 @@
 diff --git a/gpu_vulkan/texture.cpp b/gpu_vulkan/texture.cpp
-index de56700..d50a2de 100644
+index de56700..fa22098 100644
 --- a/gpu_vulkan/texture.cpp
 +++ b/gpu_vulkan/texture.cpp
-@@ -3262,6 +3262,9 @@ void texture::create_sampler()
+@@ -3262,6 +3262,10 @@ void texture::create_sampler()
  
        // Setup buffer copy regions for each face including all of its mip levels
        ::array_base<VkBufferImageCopy> bufferCopyRegions;
++      // NOTE: Pre-size once so population is contiguous without repeated growth inside nested loops.
 +      auto iRegionCount = (int)(6 * m_textureattributes.m_iMipCount);
 +      bufferCopyRegions.set_size(iRegionCount);
 +      auto iRegion = 0;
  
        for (uint32_t face = 0; face < 6; face++)
        {
-@@ -3271,17 +3274,16 @@ void texture::create_sampler()
+@@ -3271,17 +3275,17 @@ void texture::create_sampler()
              KTX_error_code result = ktxTexture_GetImageOffset(pktxtexture, level, 0, face, &offset);
              ASSERT(result == KTX_SUCCESS);
  
 -            VkBufferImageCopy bufferCopyRegion = {};
++            // NOTE: Fill pre-allocated region in place; preserves ca2 container style and avoids add() churn.
 +            auto & bufferCopyRegion = bufferCopyRegions.element_at(iRegion++);
 +            bufferCopyRegion = {};
              bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -35,7 +37,7 @@ index de56700..d50a2de 100644
        }
  
 diff --git a/gpu_vulkan/texture_ktx.cpp b/gpu_vulkan/texture_ktx.cpp
-index d91416b..d84c722 100644
+index d91416b..735fe3f 100644
 --- a/gpu_vulkan/texture_ktx.cpp
 +++ b/gpu_vulkan/texture_ktx.cpp
 @@ -25,10 +25,6 @@ namespace gpu_vulkan
@@ -49,26 +51,28 @@ index d91416b..d84c722 100644
           // cannot upload to Vulkan
           throw ::exception(error_failed);
        }
-@@ -111,6 +107,8 @@ namespace gpu_vulkan
+@@ -111,6 +107,9 @@ namespace gpu_vulkan
  
           // Setup buffer copy regions for each mip level
           ::array_base<VkBufferImageCopy> bufferCopyRegions;
++         // NOTE: Pre-size for deterministic writes and fewer allocations during staging setup.
 +         auto iRegionCount = (int) m_textureattributes.m_iMipCount;
 +         bufferCopyRegions.set_size(iRegionCount);
  
           for (uint32_t i = 0; i < m_textureattributes.m_iMipCount; i++)
           {
-@@ -118,7 +116,8 @@ namespace gpu_vulkan
+@@ -118,7 +117,9 @@ namespace gpu_vulkan
              KTX_error_code result = ktxTexture_GetImageOffset(pktxtexture, i, 0, 0, &offset);
              ASSERT(result == KTX_SUCCESS);
  
 -            VkBufferImageCopy bufferCopyRegion = {};
++            // NOTE: Write directly into indexed storage; avoids temporary objects + add() calls.
 +            auto & bufferCopyRegion = bufferCopyRegions.element_at((int)i);
 +            bufferCopyRegion = {};
              bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
              bufferCopyRegion.imageSubresource.mipLevel = i;
              bufferCopyRegion.imageSubresource.baseArrayLayer = 0;
-@@ -127,9 +126,6 @@ namespace gpu_vulkan
+@@ -127,9 +128,6 @@ namespace gpu_vulkan
              bufferCopyRegion.imageExtent.height = std::max(1u, pktxtexture->baseHeight >> i);
              bufferCopyRegion.imageExtent.depth = 1;
              bufferCopyRegion.bufferOffset = offset;
@@ -78,12 +82,13 @@ index d91416b..d84c722 100644
           }
  
           // Create optimal tiled target image
-@@ -258,7 +254,12 @@ namespace gpu_vulkan
+@@ -258,7 +256,13 @@ namespace gpu_vulkan
           VkCheckResult(vkMapMemory(pcontext->logicalDevice(), mappableMemory, 0, memReqs.size, 0, &data));
  
           // Copy image data into memory
 -         memcpy(data, ktxTextureData, memReqs.size);
 +         auto copySize = (size_t)((ktxTextureSize < memReqs.size) ? ktxTextureSize : memReqs.size);
++         // NOTE: Bound copy to valid source size and zero-fill tail to prevent over-read and stale bytes.
 +         memcpy(data, ktxTextureData, copySize);
 +         if (copySize < (size_t)memReqs.size)
 +         {
