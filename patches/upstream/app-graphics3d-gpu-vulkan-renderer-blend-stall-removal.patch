@@ -1,0 +1,40 @@
+diff --git a/gpu_vulkan/renderer.cpp b/gpu_vulkan/renderer.cpp
+index 88ec2e9..9cffa36 100644
+--- a/gpu_vulkan/renderer.cpp
++++ b/gpu_vulkan/renderer.cpp
+@@ -2403,10 +2403,7 @@ namespace gpu_vulkan
+       m_pshaderImageBlend->unbind(pcommandbuffer);
+ 
+       //vkCmdEndRenderPass(...);
+-
+-      ::cast < ::gpu_vulkan::queue > pqueueGraphics = m_pgpucontext->m_pgpudevice->graphics_queue();
+-
+-      vkQueueWaitIdle(pqueueGraphics->m_vkqueue);
++      // Avoid queue-wide stalls in the draw path; frame submission sync handles ordering.
+ 
+       //vkFreeCommandBuffers(m_pgpucontext->logicalDevice(), m_pgpucontext->m_vkcommandpool, 1, &pcommandbuffer->m_vkcommandbuffer);
+ 
+@@ -2932,10 +2929,7 @@ namespace gpu_vulkan
+       pshader->unbind(pcommandbuffer);
+ 
+       //vkCmdEndRenderPass(...);
+-
+-      ::cast < ::gpu_vulkan::queue > pqueueGraphics = m_pgpucontext->m_pgpudevice->graphics_queue();
+-
+-      vkQueueWaitIdle(pqueueGraphics->m_vkqueue);
++      // Avoid queue-wide stalls in the draw path; frame submission sync handles ordering.
+ 
+       //vkFreeCommandBuffers(m_pgpucontext->logicalDevice(), m_pgpucontext->m_vkcommandpool, 1, &pcommandbuffer->m_vkcommandbuffer);
+ 
+@@ -3263,10 +3257,7 @@ namespace gpu_vulkan
+       pshader->unbind(pcommandbuffer);
+ 
+       //vkCmdEndRenderPass(...);
+-
+-      ::cast < ::gpu_vulkan::queue > pqueueGraphics = m_pgpucontext->m_pgpudevice->graphics_queue();
+-
+-      vkQueueWaitIdle(pqueueGraphics->m_vkqueue);
++      // Avoid queue-wide stalls in the draw path; frame submission sync handles ordering.
+ 
+       //vkFreeCommandBuffers(m_pgpucontext->logicalDevice(), m_pgpucontext->m_vkcommandpool, 1, &pcommandbuffer->m_vkcommandbuffer);
+ 
