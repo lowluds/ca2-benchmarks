@@ -10,6 +10,7 @@ Current patch set:
 - `patches/upstream/app-graphics3d-gpu-vulkan-renderer-sync-tightening.patch`
 - `patches/upstream/app-graphics3d-continuum-cmake-portability.patch`
 - `patches/upstream/app-graphics3d-continuum-skybox-selection-o1.patch`
+- `patches/upstream/app-graphics3d-continuum-point-light-sort-vector.patch`
 
 ## Apply A Patch
 ```bash

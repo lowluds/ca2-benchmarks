@@ -1,0 +1,46 @@
+diff --git a/continuum/aaa_point_light_system.cpp b/continuum/aaa_point_light_system.cpp
+index 2b63717..684f8a8 100644
+--- a/continuum/aaa_point_light_system.cpp
++++ b/continuum/aaa_point_light_system.cpp
+@@ -22,9 +22,10 @@
+ 
+ // std
+ #include <array>
++#include <algorithm>
+ #include <cassert>
+-#include <map>
+ #include <stdexcept>
++#include <vector>
+ 
+ 
+ namespace app_graphics3d_continuum
+@@ -180,8 +181,9 @@ namespace app_graphics3d_continuum
+ 
+    void point_light_system::on_render(::gpu::context * pgpucontext, ::graphics3d::scene* pscene)
+    {
+-      // sort lights
+-      std::map<float, ::collection::index> sorted;
++      // NOTE: Use contiguous storage to reduce per-frame allocation/churn versus tree node inserts.
++      std::vector<std::pair<float, ::collection::index>> sorted;
++      sorted.reserve((size_t)pscene->m_mapObjects.size());
+       for (auto& kv : pscene->m_mapObjects) {
+          auto& obj = kv.element2();
+ 
+@@ -191,9 +193,16 @@ namespace app_graphics3d_continuum
+          // calculate distance
+          auto offset = m_pengine->m_pgamelayer->m_pscene->m_pcameraCurrent->GetPosition() - obj->m_transform.translation;
+          float disSquared = glm::dot(offset, offset);
+-         sorted[disSquared] = obj->m_iId;
++         // NOTE: Keep duplicates; std::map<float,...> drops lights with identical distance keys.
++         sorted.emplace_back(disSquared, obj->m_iId);
+       }
+ 
++      std::sort(sorted.begin(), sorted.end(),
++         [](const std::pair<float, ::collection::index>& a, const std::pair<float, ::collection::index>& b)
++         {
++            return a.first < b.first;
++         });
++
+       m_pshader->bind();
+ 
+       //auto properties = point_light_properties();
