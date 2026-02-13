@@ -18,6 +18,7 @@ This folder tracks patch candidates prepared for ca2 owner review.
    - Superseded by `app-graphics3d-gpu-vulkan-renderer-sync-tightening.patch`.
 
 ## Reading Order
-1. `reports/owner/owner-update-2026-02-13.md`
-2. `reports/research/*.md` for technical details per patch
-3. `patches/upstream/*.patch` for exact code changes
+1. `reports/owner/OWNER_30_SECOND_PITCH.md`
+2. `reports/owner/owner-update-2026-02-13.md`
+3. `reports/research/*.md` for technical details per patch
+4. `patches/upstream/*.patch` for exact code changes
