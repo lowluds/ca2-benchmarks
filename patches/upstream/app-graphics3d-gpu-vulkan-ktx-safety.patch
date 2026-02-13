@@ -1,26 +1,25 @@
 diff --git a/gpu_vulkan/texture.cpp b/gpu_vulkan/texture.cpp
-index de56700..a6a6c7d 100644
+index de56700..d50a2de 100644
 --- a/gpu_vulkan/texture.cpp
 +++ b/gpu_vulkan/texture.cpp
-@@ -29,6 +29,7 @@
- //#include <ktxvulkan.h>
- #include <math.h>
- #include <stb/stb_image.h>
-+#include <vector>
- 
- CLASS_DECL_GPU_VULKAN VkFormat get_ktx_vk_format(ktxTexture *pktxtexture, int & iChannelCount, int &iBitsPerChannel);
- 
-@@ -3261,7 +3262,8 @@ void texture::create_sampler()
-       vkUnmapMemory(pcontext->logicalDevice(), stagingMemory);
+@@ -3262,6 +3262,9 @@ void texture::create_sampler()
  
        // Setup buffer copy regions for each face including all of its mip levels
--      ::array_base<VkBufferImageCopy> bufferCopyRegions;
-+      std::vector<VkBufferImageCopy> bufferCopyRegions;
-+      bufferCopyRegions.reserve((size_t)(6 * m_textureattributes.m_iMipCount));
+       ::array_base<VkBufferImageCopy> bufferCopyRegions;
++      auto iRegionCount = (int)(6 * m_textureattributes.m_iMipCount);
++      bufferCopyRegions.set_size(iRegionCount);
++      auto iRegion = 0;
  
        for (uint32_t face = 0; face < 6; face++)
        {
-@@ -3276,12 +3278,12 @@ void texture::create_sampler()
+@@ -3271,17 +3274,16 @@ void texture::create_sampler()
+             KTX_error_code result = ktxTexture_GetImageOffset(pktxtexture, level, 0, face, &offset);
+             ASSERT(result == KTX_SUCCESS);
+ 
+-            VkBufferImageCopy bufferCopyRegion = {};
++            auto & bufferCopyRegion = bufferCopyRegions.element_at(iRegion++);
++            bufferCopyRegion = {};
+             bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
              bufferCopyRegion.imageSubresource.mipLevel = level;
              bufferCopyRegion.imageSubresource.baseArrayLayer = face;
              bufferCopyRegion.imageSubresource.layerCount = 1;
@@ -30,25 +29,16 @@ index de56700..a6a6c7d 100644
 +            bufferCopyRegion.imageExtent.height = std::max(1u, pktxtexture->baseHeight >> level);
              bufferCopyRegion.imageExtent.depth = 1;
              bufferCopyRegion.bufferOffset = offset & ~0xF;
- 
+-
 -            bufferCopyRegions.add(bufferCopyRegion);
-+            bufferCopyRegions.push_back(bufferCopyRegion);
           }
        }
  
 diff --git a/gpu_vulkan/texture_ktx.cpp b/gpu_vulkan/texture_ktx.cpp
-index d91416b..298e921 100644
+index d91416b..d84c722 100644
 --- a/gpu_vulkan/texture_ktx.cpp
 +++ b/gpu_vulkan/texture_ktx.cpp
-@@ -6,6 +6,7 @@
- #include "texture.h"
- #include "vk_init.h"
- #include <ktx.h>
-+#include <vector>
- 
- 
- CLASS_DECL_GPU_VULKAN VkFormat get_ktx_vk_format(ktxTexture *pktxtexture, int &iChannelCount, int &iBitsPerChannel, int & iSrgb, int & iFloat);
-@@ -25,10 +26,6 @@ namespace gpu_vulkan
+@@ -25,10 +25,6 @@ namespace gpu_vulkan
  
        if (vkformat == VK_FORMAT_UNDEFINED)
        {
@@ -59,33 +49,43 @@ index d91416b..298e921 100644
           // cannot upload to Vulkan
           throw ::exception(error_failed);
        }
-@@ -110,7 +107,8 @@ namespace gpu_vulkan
-          vkUnmapMemory(pcontext->logicalDevice(), stagingMemory);
+@@ -111,6 +107,8 @@ namespace gpu_vulkan
  
           // Setup buffer copy regions for each mip level
--         ::array_base<VkBufferImageCopy> bufferCopyRegions;
-+         std::vector<VkBufferImageCopy> bufferCopyRegions;
-+         bufferCopyRegions.reserve((size_t)m_textureattributes.m_iMipCount);
+          ::array_base<VkBufferImageCopy> bufferCopyRegions;
++         auto iRegionCount = (int) m_textureattributes.m_iMipCount;
++         bufferCopyRegions.set_size(iRegionCount);
  
           for (uint32_t i = 0; i < m_textureattributes.m_iMipCount; i++)
           {
-@@ -129,7 +127,7 @@ namespace gpu_vulkan
+@@ -118,7 +116,8 @@ namespace gpu_vulkan
+             KTX_error_code result = ktxTexture_GetImageOffset(pktxtexture, i, 0, 0, &offset);
+             ASSERT(result == KTX_SUCCESS);
+ 
+-            VkBufferImageCopy bufferCopyRegion = {};
++            auto & bufferCopyRegion = bufferCopyRegions.element_at((int)i);
++            bufferCopyRegion = {};
+             bufferCopyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+             bufferCopyRegion.imageSubresource.mipLevel = i;
+             bufferCopyRegion.imageSubresource.baseArrayLayer = 0;
+@@ -127,9 +126,6 @@ namespace gpu_vulkan
+             bufferCopyRegion.imageExtent.height = std::max(1u, pktxtexture->baseHeight >> i);
+             bufferCopyRegion.imageExtent.depth = 1;
              bufferCopyRegion.bufferOffset = offset;
- 
- 
+-
+-
 -            bufferCopyRegions.add(bufferCopyRegion);
-+            bufferCopyRegions.push_back(bufferCopyRegion);
           }
  
           // Create optimal tiled target image
-@@ -258,7 +256,12 @@ namespace gpu_vulkan
+@@ -258,7 +254,12 @@ namespace gpu_vulkan
           VkCheckResult(vkMapMemory(pcontext->logicalDevice(), mappableMemory, 0, memReqs.size, 0, &data));
  
           // Copy image data into memory
 -         memcpy(data, ktxTextureData, memReqs.size);
 +         auto copySize = (size_t)((ktxTextureSize < memReqs.size) ? ktxTextureSize : memReqs.size);
 +         memcpy(data, ktxTextureData, copySize);
-+         if (copySize < memReqs.size)
++         if (copySize < (size_t)memReqs.size)
 +         {
 +            memset(((unsigned char *)data) + copySize, 0, (size_t)memReqs.size - copySize);
 +         }
