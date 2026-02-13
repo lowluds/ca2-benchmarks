@@ -9,6 +9,7 @@ Current patch set:
 - `patches/upstream/app-graphics3d-gpu-vulkan-ktx-safety.patch`
 - `patches/upstream/app-graphics3d-gpu-vulkan-renderer-sync-tightening.patch`
 - `patches/upstream/app-graphics3d-continuum-cmake-portability.patch`
+- `patches/upstream/app-graphics3d-continuum-skybox-selection-o1.patch`
 
 ## Apply A Patch
 ```bash
@@ -18,3 +19,4 @@ git apply patches/upstream/<patch-name>.patch
 
 ## Notes
 - `AGENTS.md` is intentionally local and ignored by git.
+- New patches include inline `// NOTE:` comments in changed code to explain optimization intent for reviewers.
